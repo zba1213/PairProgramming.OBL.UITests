@@ -1,0 +1,13 @@
+# DR musiksamling – UI-tests
+
+Separat Visual Studio-solution med MSTest og Selenium.
+Kræver .NET 8 SDK og Chrome/Chromium. Selenium Manager henter en passende driver
+og kræver internetadgang første gang.
+
+1. Start backend på http://localhost:5000 med de tre eksempelplader.
+2. Start frontend på http://localhost:5500.
+3. Kør `dotnet test MusicRecords.UITests.sln`.
+
+Valgfrie miljøvariabler: `FRONTEND_URL` og `CHROME_BINARY` (sti til Chromium).
+Testen kører headless, venter på API-kaldet og kontrollerer antal plader samt titel,
+kunstner, formateret varighed og udgivelsesår. Backend eller CDN-fejl giver fejl i testen.
