@@ -11,3 +11,7 @@ og kræver internetadgang første gang.
 Valgfrie miljøvariabler: `FRONTEND_URL` og `CHROME_BINARY` (sti til Chromium).
 Testen kører headless, venter på API-kaldet og kontrollerer antal plader samt titel,
 kunstner, formateret varighed og udgivelsesår. Backend eller CDN-fejl giver fejl i testen.
+
+Til login- og logout-testen sættes `UI_TEST_USERNAME`, `UI_TEST_PASSWORD` og
+`UI_TEST_ROLE` til den lokale testkonto fra backendens loginopsætning.
+Testen for ugyldigt login kan køres uden en testkonto.
