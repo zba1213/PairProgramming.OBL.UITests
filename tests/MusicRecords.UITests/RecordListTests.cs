@@ -9,6 +9,8 @@ public class RecordListTests
     public void RecordList_DisplaysRecordsFromRunningApi()
     {
         using var driver = OpenRecordList();
+        Assert.AreEqual(0, driver.FindElements(By.Id("record-title")).Count);
+        Assert.AreEqual(0, driver.FindElements(By.CssSelector(".delete-record")).Count);
         var rows = driver.FindElements(By.CssSelector("[data-testid='record-row']"));
         Assert.AreEqual(3, rows.Count, "Run with the story 1 backend seed data.");
         StringAssert.Contains(rows[0].Text, "Kind of Blue");
@@ -41,6 +43,45 @@ public class RecordListTests
         driver.FindElement(By.CssSelector(".reset-filters")).Click();
         wait.Until(d => d.FindElements(By.CssSelector("[data-testid='record-row']")).Count == 3);
         Assert.AreEqual(string.Empty, driver.FindElement(By.Id("filter-title")).GetDomProperty("value"));
+    }
+
+    [TestMethod]
+    public void Editor_CanAddAndDeleteARecord()
+    {
+        var username = Environment.GetEnvironmentVariable("UI_TEST_USERNAME");
+        var password = Environment.GetEnvironmentVariable("UI_TEST_PASSWORD");
+        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password)
+            || Environment.GetEnvironmentVariable("UI_TEST_ROLE") != "Editor")
+        {
+            Assert.Inconclusive("Configure an Editor test account and run against a test database.");
+        }
+
+        using var driver = OpenRecordList();
+        var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
+        SubmitCredentials(driver, username!, password!);
+        var title = $"Testplade {Guid.NewGuid():N}";
+        var row = By.XPath($"//tr[@data-testid='record-row'][td[1]='{title}']");
+
+        var titleInput = wait.Until(d => d.FindElements(By.Id("record-title")).FirstOrDefault(e => e.Enabled));
+        Assert.IsNotNull(titleInput);
+        titleInput.SendKeys(title);
+        driver.FindElement(By.Id("record-artist")).SendKeys("Testkunstner");
+        driver.FindElement(By.Id("record-duration")).SendKeys("125");
+        driver.FindElement(By.Id("record-year")).SendKeys("2024");
+        driver.FindElement(By.CssSelector(".record-form button[type='submit']")).Click();
+
+        var added = wait.Until(d => d.FindElements(row).FirstOrDefault(
+            element => element.FindElement(By.CssSelector(".delete-record")).Enabled));
+        Assert.IsNotNull(added);
+        StringAssert.Contains(added.Text, "Testkunstner");
+        StringAssert.Contains(added.Text, "2:05");
+        StringAssert.Contains(added.Text, "2024");
+
+        added.FindElement(By.CssSelector(".delete-record")).Click();
+        driver.SwitchTo().Alert().Accept();
+        wait.Until(d => d.FindElements(By.CssSelector(".record-feedback [role='status']"))
+            .Any(status => status.Text == "Musikpladen er slettet."));
+        wait.Until(d => d.FindElements(row).Count == 0);
     }
 
     [TestMethod]
