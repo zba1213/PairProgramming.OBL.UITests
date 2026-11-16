@@ -15,3 +15,7 @@ kunstner, formateret varighed og udgivelsesår. Backend eller CDN-fejl giver fej
 Til login- og logout-testen sættes `UI_TEST_USERNAME`, `UI_TEST_PASSWORD` og
 `UI_TEST_ROLE` til den lokale testkonto fra backendens loginopsætning.
 Testen for ugyldigt login kan køres uden en testkonto.
+
+Kør hele suiten mod en frisk testdatabase med de tre eksempelplader. Testen for
+tilføjelse og sletning kræver rollen `Editor` og opretter en plade med unikt navn,
+som den sletter igen som en del af testen.
