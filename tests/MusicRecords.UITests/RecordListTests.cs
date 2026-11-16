@@ -26,7 +26,7 @@ public class RecordListTests
         driver.FindElement(By.Id("filter-artist")).SendKeys("miles");
         var year = driver.FindElement(By.Id("filter-year"));
         year.SendKeys("1959");
-        var search = driver.FindElement(By.CssSelector("button[type='submit']"));
+        var search = driver.FindElement(By.CssSelector(".filters button[type='submit']"));
         search.Click();
 
         wait.Until(d => d.FindElements(By.CssSelector("[data-testid='record-row']")).Count == 1);
@@ -43,6 +43,48 @@ public class RecordListTests
         Assert.AreEqual(string.Empty, driver.FindElement(By.Id("filter-title")).GetDomProperty("value"));
     }
 
+    [TestMethod]
+    public void Login_WithValidCredentials_ShowsAccountAndCanLogOut()
+    {
+        var username = Environment.GetEnvironmentVariable("UI_TEST_USERNAME");
+        var password = Environment.GetEnvironmentVariable("UI_TEST_PASSWORD");
+        var role = Environment.GetEnvironmentVariable("UI_TEST_ROLE");
+        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password) || string.IsNullOrEmpty(role))
+            Assert.Inconclusive("Set UI_TEST_USERNAME, UI_TEST_PASSWORD and UI_TEST_ROLE to match the API test account.");
+
+        using var driver = OpenRecordList();
+        SubmitCredentials(driver, username!, password!);
+        var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
+        var status = wait.Until(d => d.FindElements(By.CssSelector("[data-testid='login-status']")).FirstOrDefault());
+        Assert.IsNotNull(status);
+        Assert.AreEqual($"{username} ({role})", status.Text);
+
+        driver.FindElement(By.CssSelector(".login-panel button")).Click();
+        wait.Until(d => d.FindElements(By.Id("login-password")).Count == 1);
+        Assert.AreEqual(0, driver.FindElements(By.CssSelector("[data-testid='login-status']")).Count);
+        Assert.AreEqual(3, driver.FindElements(By.CssSelector("[data-testid='record-row']")).Count);
+    }
+
+    [TestMethod]
+    public void Login_WithInvalidCredentials_ShowsErrorAndLeavesRecordListVisible()
+    {
+        using var driver = OpenRecordList();
+        SubmitCredentials(driver, $"unknown-{Guid.NewGuid():N}", "invalid-password");
+        var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
+        var alert = wait.Until(d => d.FindElements(By.CssSelector(".login-panel [role='alert']")).FirstOrDefault());
+        Assert.IsNotNull(alert);
+        Assert.AreEqual("Forkert brugernavn eller adgangskode.", alert.Text);
+        Assert.AreEqual(0, driver.FindElements(By.CssSelector("[data-testid='login-status']")).Count);
+        Assert.AreEqual(3, driver.FindElements(By.CssSelector("[data-testid='record-row']")).Count);
+    }
+
+    private static void SubmitCredentials(IWebDriver driver, string username, string password)
+    {
+        driver.FindElement(By.Id("login-username")).SendKeys(username);
+        driver.FindElement(By.Id("login-password")).SendKeys(password);
+        driver.FindElement(By.CssSelector(".login-panel button[type='submit']")).Click();
+    }
+
     private static ChromeDriver OpenRecordList()
     {
         var options = new ChromeOptions();
@@ -57,8 +99,8 @@ public class RecordListTests
             driver.Navigate().GoToUrl(Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:5500");
             var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
             wait.Until(d => d.FindElements(By.CssSelector("[data-testid='record-row']")).Count > 0
-                || d.FindElements(By.CssSelector("[role='alert']")).Count > 0);
-            Assert.AreEqual(0, driver.FindElements(By.CssSelector("[role='alert']")).Count, "API must be running and accessible through CORS.");
+                || d.FindElements(By.CssSelector("#app > [role='alert']")).Count > 0);
+            Assert.AreEqual(0, driver.FindElements(By.CssSelector("#app > [role='alert']")).Count, "API must be running and accessible through CORS.");
             return driver;
         }
         catch
