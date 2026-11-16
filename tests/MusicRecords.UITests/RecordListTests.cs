@@ -10,6 +10,7 @@ public class RecordListTests
     {
         using var driver = OpenRecordList();
         Assert.AreEqual(0, driver.FindElements(By.Id("record-title")).Count);
+        Assert.AreEqual(0, driver.FindElements(By.CssSelector(".edit-record")).Count);
         Assert.AreEqual(0, driver.FindElements(By.CssSelector(".delete-record")).Count);
         var rows = driver.FindElements(By.CssSelector("[data-testid='record-row']"));
         Assert.AreEqual(3, rows.Count, "Run with the story 1 backend seed data.");
@@ -46,7 +47,7 @@ public class RecordListTests
     }
 
     [TestMethod]
-    public void Editor_CanAddAndDeleteARecord()
+    public void Editor_CanAddUpdateAndDeleteARecord()
     {
         var username = Environment.GetEnvironmentVariable("UI_TEST_USERNAME");
         var password = Environment.GetEnvironmentVariable("UI_TEST_PASSWORD");
@@ -77,11 +78,26 @@ public class RecordListTests
         StringAssert.Contains(added.Text, "2:05");
         StringAssert.Contains(added.Text, "2024");
 
-        added.FindElement(By.CssSelector(".delete-record")).Click();
+        added.FindElement(By.CssSelector(".edit-record")).Click();
+        var editTitle = driver.FindElement(By.Id("record-title"));
+        Assert.AreEqual(title, editTitle.GetDomProperty("value"));
+        Assert.AreEqual("Testkunstner", driver.FindElement(By.Id("record-artist")).GetDomProperty("value"));
+        var updatedTitle = title + " opdateret";
+        editTitle.Clear();
+        editTitle.SendKeys(updatedTitle);
+        driver.FindElement(By.CssSelector(".record-form button[type='submit']")).Click();
+
+        var updatedRow = By.XPath($"//tr[@data-testid='record-row'][td[1]='{updatedTitle}']");
+        var updated = wait.Until(d => d.FindElements(updatedRow).FirstOrDefault(
+            element => element.FindElement(By.CssSelector(".delete-record")).Enabled));
+        Assert.IsNotNull(updated);
+        Assert.AreEqual(0, driver.FindElements(row).Count);
+
+        updated.FindElement(By.CssSelector(".delete-record")).Click();
         driver.SwitchTo().Alert().Accept();
         wait.Until(d => d.FindElements(By.CssSelector(".record-feedback [role='status']"))
             .Any(status => status.Text == "Musikpladen er slettet."));
-        wait.Until(d => d.FindElements(row).Count == 0);
+        wait.Until(d => d.FindElements(updatedRow).Count == 0);
     }
 
     [TestMethod]
